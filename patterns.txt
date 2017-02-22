@@ -1,0 +1,35 @@
+//
+\d+\/\d+
+
+// email
+^[a-zA-Z_0-9\_\.]{1,64}@[a-zA-Z_0-9\.]{1,255}
+
+// URL
+^(https|http|ftp|mailto)://[a-zA-Z0-9+&@:_#/%?\.]+
+
+// composite numbers
+\d+([\.,]\d+)+
+
+// Phone numbers
+\+?\d+(-\d+)+
+\+\d+
+
+// Time
+\d{1,2}:\d{1,2}:\d{1,2}
+
+// b.c.
+[a-zA-Z]\.[a-zA-Z]\.
+
+// abreviations
+\w+-\w+
+
+// letter numbers
+[a-zA-Z]+\d+
+\d+[a-zA-Z]+
+
+// slang
+\w+'\w+
+'em
+
+\\ 15 double hyphens
+--+
