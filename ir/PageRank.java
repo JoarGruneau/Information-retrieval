@@ -22,7 +22,7 @@ public class PageRank {
     /**
      * Mapping from document names to document numbers.
      */
-    Hashtable<String, Integer> docNumber = new Hashtable<String, Integer>();
+    HashMap<String, Integer> docNumber = new HashMap<>();
 
     /**
      * Mapping from document numbers to document names
@@ -40,7 +40,7 @@ public class PageRank {
      * If there are no outlinks from i, then the value corresponding key i is
      * null.
      */
-    HashMap<Integer, Hashtable<Integer, Boolean>> link = new HashMap<>();
+    HashMap<Integer, HashMap<Integer, Boolean>> link = new HashMap<>();
 
     /**
      * The number of outlinks from each node.
@@ -52,6 +52,7 @@ public class PageRank {
      */
     int numberOfSinks = 0;
 
+    final static double c = 0.85;
     /**
      * The probability that the surfer will be bored, stop following links, and
      * take a random jump somewhere.
@@ -73,7 +74,14 @@ public class PageRank {
     /* --------------------------------------------- */
     public PageRank(String filename) {
         int noOfDocs = readDocs(filename);
-        computePageRank(noOfDocs);
+        //monteCarlo1(noOfDocs, 1000 * noOfDocs);
+        //monteCarlo2(noOfDocs, 10);
+        //monteCarlo3(noOfDocs, 10);
+        //monteCarlo4(noOfDocs, 10);
+        //double[] scores = monteCarlo5(noOfDocs, 10 * noOfDocs);
+        //sortAndSave(scores, "hoppla");
+        //computePageRank(noOfDocs);noOfDoc
+        plotScores(noOfDocs);
     }
 
 
@@ -118,7 +126,7 @@ public class PageRank {
                     // Set the probability to 0 for now, to indicate that there is
                     // a link from fromdoc to otherDoc.
                     if (link.get(fromdoc) == null) {
-                        link.put(fromdoc, new Hashtable<Integer, Boolean>());
+                        link.put(fromdoc, new HashMap<>());
                     }
                     if (link.get(fromdoc).get(otherDoc) == null) {
                         link.get(fromdoc).put(otherDoc, true);
@@ -146,12 +154,32 @@ public class PageRank {
         return fileIndex;
     }
 
+    void plotScores(int numberOfDocs) {
+        int stepSize = 10;
+        int steps = 10;
+        double[] powerScores = powerIteration(numberOfDocs);
+        Doc[] sortedScores = sortScores(powerScores);
+        double[] tmpScores;
+        double[] y1 = new double[steps];
+        double[] x = new double[steps];
+        double[] y2 = new double[steps];
+        for (int i = 1; i <= steps; i++) {
+            x[(i - 1)] = i * stepSize;
+            tmpScores = monteCarlo5(numberOfDocs, i * stepSize * numberOfDocs);
+            y1[(i - 1)] = sumSquareDiff(sortedScores, tmpScores, 0, 30);
+            y2[(i - 1)] = sumSquareDiff(
+                    sortedScores, tmpScores, numberOfDocs - 30, numberOfDocs);
+        }
+        Plot plot = new Plot("Monte Carlo 5", x, y1, y2);
+
+    }
+
 
     /* --------------------------------------------- */
  /*
      *   Computes the pagerank of each document.
      */
-    void computePageRank(int numberOfDocs) {
+    double[] powerIteration(int numberOfDocs) {
         double[][] list1 = new double[1][numberOfDocs];
         double[][] list2 = new double[1][numberOfDocs];
         list2[0][0] = 1;
@@ -165,11 +193,13 @@ public class PageRank {
                 for (int j = 0; j < numberOfDocs; j++) {
                     if (link.get(i).containsKey(j) && link.get(i).get(j) == true) {
                         listG[i][j] = (1 - BORED) / out[i] + newPageProb;
+                    } else {
+                        listG[i][j] = newPageProb;
                     }
                 }
             } else {
                 for (int j = 0; j < numberOfDocs; j++) {
-                    listG[i][j] = (1 - BORED) / numberOfDocs + newPageProb;
+                    listG[i][j] = 1.0 / numberOfDocs;
                 }
             }
         }
@@ -183,24 +213,189 @@ public class PageRank {
             xLast = xNew;
             xNew = xNew.multiply(gMatrix);
         }
-        Doc[] docs = sortScores(xNew);
-        savePageRank(docs);
+        return xNew.getVector();
     }
 
-    Doc[] sortScores(Matrix scores) {
-        Doc[] docs = new Doc[scores.columns];
-        for (int i = 0; i < scores.columns; i++) {
-            docs[i] = new Doc(i, scores.matrix[0][i]);
+    double[] monteCarlo1(int numberOfDocs, int n) {
+        double[] scores = new double[numberOfDocs];
+        int iteration = 0;
+        while (iteration < n) {
+            int doc = (int) (Math.random() * numberOfDocs);
+            while (true) {
+                double choice = Math.random();
+                if (choice < c) {
+                    if (link.containsKey(doc) && link.get(doc).size() > 0) {
+                        doc = (int) link.get(doc).keySet()
+                                .toArray()[(int) (Math.random() * (out[doc]))];
+                    } else {
+                        doc = (int) (Math.random() * numberOfDocs);
+                    }
+                } else {
+                    break;
+                }
+            }
+            iteration++;
+            scores[doc]++;
+        }
+        normalize(scores, n);
+        return scores;
+    }
+
+    double[] monteCarlo2(int numberOfDocs, int n) {
+        double[] scores = new double[numberOfDocs];
+        int m = n / numberOfDocs;
+        int iteration = 0;
+        int tmpDoc;
+        while (iteration < m) {
+            for (int doc = 0; doc < numberOfDocs; doc++) {
+                tmpDoc = doc;
+                while (true) {
+                    double choice = Math.random();
+                    if (choice <= c) {
+                        if (link.containsKey(tmpDoc)
+                                && link.get(tmpDoc).size() > 0) {
+
+                            tmpDoc = (int) link.get(tmpDoc).keySet()
+                                    .toArray()[(int) (Math.random() * (out[tmpDoc]))];
+                        } else {
+                            tmpDoc = (int) (Math.random() * numberOfDocs);
+                        }
+                    } else {
+                        break;
+                    }
+                }
+                scores[tmpDoc]++;
+
+            }
+            iteration++;
+
+        }
+        normalize(scores, n);
+        return scores;
+    }
+
+    double[] monteCarlo3(int numberOfDocs, int n) {
+        double[] scores = new double[numberOfDocs];
+        int m = n / numberOfDocs;
+        int iteration = 0;
+        int tmpDoc;
+        while (iteration < m) {
+            for (int doc = 0; doc < numberOfDocs; doc++) {
+                tmpDoc = doc;
+                while (true) {
+                    double choice = Math.random();
+                    if (choice <= c) {
+                        scores[tmpDoc]++;
+                        if (link.containsKey(tmpDoc) && link.get(tmpDoc).size() > 0) {
+                            tmpDoc = (int) link.get(tmpDoc).keySet()
+                                    .toArray()[(int) (Math.random() * (out[tmpDoc]))];
+                        } else {
+                            tmpDoc = (int) (Math.random() * numberOfDocs);
+                        }
+                    } else {
+                        break;
+                    }
+                }
+                scores[tmpDoc]++;
+
+            }
+            iteration++;
+
+        }
+        normalize(scores, (1 - c) / n);
+        return scores;
+    }
+
+    double[] monteCarlo4(int numberOfDocs, int n) {
+        int m = n / numberOfDocs;
+        double[] scores = new double[numberOfDocs];
+        int totalVisited = 0;
+        int iteration = 0;
+        int tmpDoc;
+        double choice;
+        while (iteration < m) {
+            for (int doc = 0; doc < numberOfDocs; doc++) {
+                tmpDoc = doc;
+                while (link.containsKey(tmpDoc) && link.get(tmpDoc).size() > 0) {
+                    choice = Math.random();
+                    if (choice < c) {
+                        scores[tmpDoc]++;
+                        totalVisited++;
+                        tmpDoc = (int) link.get(tmpDoc).keySet()
+                                .toArray()[(int) (Math.random() * (out[tmpDoc]))];
+                    } else {
+                        break;
+                    }
+                }
+                scores[tmpDoc]++;
+                totalVisited++;
+            }
+            iteration++;
+        }
+        normalize(scores, totalVisited);
+        return scores;
+    }
+
+    double[] monteCarlo5(int numberOfDocs, int n) {
+        double[] scores = new double[numberOfDocs];
+        int totalVisited = 0;
+        int iteration = 0;
+        int tmpDoc;
+        double choice;
+        while (iteration < n) {
+            tmpDoc = (int) (Math.random() * numberOfDocs);;
+            while (link.containsKey(tmpDoc) && link.get(tmpDoc).size() > 0) {
+                choice = Math.random();
+                if (choice < c) {
+                    scores[tmpDoc]++;
+                    totalVisited++;
+                    tmpDoc = (int) link.get(tmpDoc).keySet()
+                            .toArray()[(int) (Math.random() * (out[tmpDoc]))];
+                } else {
+                    break;
+                }
+            }
+            scores[tmpDoc]++;
+            totalVisited++;
+            iteration++;
+        }
+        normalize(scores, totalVisited);
+        return scores;
+    }
+
+    void normalize(double[] scores, double constant) {
+        for (int i = 0; i < scores.length; i++) {
+            scores[i] /= constant;
+        }
+    }
+
+    void sortAndSave(double[] scores, String name) {
+        Doc[] docs = sortScores(scores);
+        saveScoreDocId(docs, name);
+    }
+
+//    Doc[] sortScores(Matrix scores) {
+//        Doc[] docs = new Doc[scores.columns];
+//        for (int i = 0; i < scores.columns; i++) {
+//            docs[i] = new Doc(i, scores.matrix[0][i]);
+//        }
+//        Arrays.sort(docs);
+//        return docs;
+//    }
+    Doc[] sortScores(double[] scores) {
+        Doc[] docs = new Doc[scores.length];
+        for (int i = 0; i < scores.length; i++) {
+            docs[i] = new Doc(i, scores[i]);
         }
         Arrays.sort(docs);
         return docs;
     }
 
-    void savePageRank(Doc[] docs) {
+    void saveScoreDocId(Doc[] docs, String name) {
         try {
-            PrintWriter writer = new PrintWriter("pageRanking.txt", "UTF-8");
+            PrintWriter writer = new PrintWriter(name + ".txt", "UTF-8");
             for (Doc doc : docs) {
-                writer.println(doc.toString());
+                writer.println(docName[doc.docID] + "; " + doc.score);
             }
             writer.close();
         } catch (FileNotFoundException ex) {
@@ -210,8 +405,59 @@ public class PageRank {
         }
     }
 
+    void saveScoreName(Doc[] docs, String name) {
+        try {
+            HashMap translater = docIdTranslater("articleTitles.txt", ";");
+            PrintWriter writer = new PrintWriter(name + ".txt", "UTF-8");
+            for (Doc doc : docs) {
+                writer.println(translater.get(docName[doc.docID]) + "; " + doc.score);
+            }
+            writer.close();
+        } catch (FileNotFoundException ex) {
+            Logger.getLogger(PageRank.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (UnsupportedEncodingException ex) {
+            Logger.getLogger(PageRank.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (IOException ex) {
+            Logger.getLogger(PageRank.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
 
-    /* --------------------------------------------- */
+    void saveHashSerial(Doc[] docs, String name) {
+        HashMap translater;
+        try {
+            translater = docIdTranslater("articleTitles.txt", ";");
+            HashSerial hashSerial = new HashSerial();
+            for (Doc doc : docs) {
+                hashSerial.put(translater.get(docName[doc.docID]), doc.score);
+            }
+            hashSerial.serialize("scores");
+        } catch (IOException ex) {
+            Logger.getLogger(PageRank.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+
+    HashMap docIdTranslater(String filename, String seperator)
+            throws IOException {
+        HashMap<String, String> hashMap = new HashMap<>();
+        BufferedReader in = new BufferedReader(new FileReader(filename));
+        String line;
+        while ((line = in.readLine()) != null) {
+            int index = line.indexOf(seperator);
+            String docID = line.substring(0, index);
+            String name = line.substring(index + 1);
+            hashMap.put(docID, name);
+        }
+        return hashMap;
+    }
+
+    double sumSquareDiff(Doc[] docs, double[] score2, int start, int stop) {
+        double sum = 0;
+        for (int i = start; i < stop; i++) {
+            sum += Math.pow(docs[i].score - score2[docs[i].docID], 2);
+        }
+        return sum;
+    }
+
     public static void main(String[] args) {
         if (args.length != 1) {
             System.err.println("Please give the name of the link file");
@@ -254,20 +500,29 @@ public class PageRank {
         }
 
         public double absDiff(Matrix other) {
+
             if (this.rows != 1 || other.rows != 1
                     || this.columns != other.columns) {
                 throw new Error("Wrong size of matrix");
             }
-            double[] listResult = new double[columns];
-            for (int i = 0; i < columns; i++) {
-                listResult[i] = Math.pow(matrix[0][i] - other.matrix[0][i], 2);
-            }
             double result = 0;
-            for (double entry : listResult) {
-                result += entry;
+            for (int i = 0; i < columns; i++) {
+                result += Math.pow(matrix[0][i] - other.matrix[0][i], 2);
             }
             result = Math.sqrt(result);
             return result;
+        }
+
+        public double sumRow() {
+            double sum = 0;
+            for (int j = 0; j < columns; j++) {
+                sum += matrix[0][j];
+            }
+            return sum;
+        }
+
+        public double[] getVector() {
+            return matrix[0];
         }
 
     }
@@ -284,7 +539,7 @@ public class PageRank {
 
         @Override
         public String toString() {
-            return docID + ": " + score;
+            return docID + "; " + score;
         }
 
         @Override
