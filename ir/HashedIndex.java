@@ -202,25 +202,55 @@ public class HashedIndex implements Index {
         return result;
     }
 
-    public PostingsList cosineScore(Query query) {
+    public PostingsList unionQuery(Query query) {
         PostingsList result = new PostingsList();
-        PostingsList postingsList;
         int postingsIndex;
+        PostingsList postingsList;
         for (int i = 0; i < query.terms.size(); i++) {
-            postingsList = getPostings(query.terms.get(i));
-            postingsList.calcScore();
+            postingsList = getPostings(query.terms.get(i)).clone();
             for (PostingsEntry entry : postingsList.list) {
                 postingsIndex = result.index(entry);
-                if (postingsIndex != -1) {
-                    result.get(postingsIndex).score += entry.score;
-                } else {
+                if (postingsIndex == -1) {
                     result.add(entry.clone());
                 }
             }
         }
+        return result;
+    }
+
+    public PostingsList cosineScore(Query query) {
+        PostingsList result = new PostingsList();
+        PostingsList postingsList;
+        HashMap<Integer, PostingsEntry> scores = new HashMap<>();
+        for (int i = 0; i < query.terms.size(); i++) {
+            postingsList = getPostings(query.terms.get(i)).clone();
+            postingsList.calcScore();
+            for (PostingsEntry entry : postingsList.list) {
+                if (scores.containsKey(entry.docID)) {
+                    PostingsEntry tmpEntry = scores.get(entry.docID);
+                    tmpEntry.score += entry.score;
+                    scores.put(tmpEntry.docID, tmpEntry);
+                } else {
+                    scores.put(entry.docID, entry);
+                }
+            }
+        }
+        for (int docID : scores.keySet()) {
+            result.add(scores.get(docID));
+        }
         result.normalizeScore();
         result.sort();
         return result;
+    }
+
+    public PostingsList pageRankScore(PostingsList postingsList) {
+        HashSerial scores = HashSerial.deSerialize("pageRank/pageRank");
+        for (PostingsEntry entry : postingsList.list) {
+            entry.score += Double.parseDouble(
+                    (String) scores.get(docIDs.get("" + entry.docID)));
+        }
+        postingsList.sort();
+        return postingsList;
     }
 
     /**
@@ -249,7 +279,14 @@ public class HashedIndex implements Index {
                         getPostings(query.terms.get(i)), i);
             }
         } else if (queryType == Index.RANKED_QUERY) {
-            result = cosineScore(query);
+            if (rankingType == Index.TF_IDF) {
+                result = cosineScore(query);
+            } else if (rankingType == Index.PAGERANK) {
+                result = unionQuery(query);
+                pageRankScore(result);
+            } else {
+
+            }
         }
 
         return result;

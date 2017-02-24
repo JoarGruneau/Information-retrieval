@@ -50,7 +50,7 @@ public class PostingsList implements Serializable {
         for (int i = 0; i < list.size(); i++) {
             PostingsEntry entry = get(i);
             entry.score = entry.possitions.size()
-                    * Math.log((Indexer.lastDocID - 1) / list.size());
+                    * Math.log10((Index.docIDs.size()) / list.size());
         }
     }
 
@@ -86,6 +86,14 @@ public class PostingsList implements Serializable {
 
     public void sort() {
         Collections.sort(list);
+    }
+
+    public PostingsList clone() {
+        PostingsList clone = new PostingsList();
+        for (PostingsEntry entry : list) {
+            clone.add(entry.clone());
+        }
+        return clone;
     }
 
     public void serialize(String outFile) {

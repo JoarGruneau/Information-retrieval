@@ -78,10 +78,10 @@ public class PageRank {
         //monteCarlo2(noOfDocs, 10);
         //monteCarlo3(noOfDocs, 10);
         //monteCarlo4(noOfDocs, 10);
-        //double[] scores = monteCarlo5(noOfDocs, 10 * noOfDocs);
+        //double[] scores = monteCarlo5(noOfDocs, 100 * noOfDocs);
         //sortAndSave(scores, "hoppla");
-        //computePageRank(noOfDocs);noOfDoc
-        plotScores(noOfDocs);
+        computePageRank(noOfDocs);
+        //plotScores(noOfDocs);
     }
 
 
@@ -154,66 +154,97 @@ public class PageRank {
         return fileIndex;
     }
 
-    void plotScores(int numberOfDocs) {
-        int stepSize = 10;
-        int steps = 10;
-        double[] powerScores = powerIteration(numberOfDocs);
-        Doc[] sortedScores = sortScores(powerScores);
-        double[] tmpScores;
-        double[] y1 = new double[steps];
-        double[] x = new double[steps];
-        double[] y2 = new double[steps];
-        for (int i = 1; i <= steps; i++) {
-            x[(i - 1)] = i * stepSize;
-            tmpScores = monteCarlo5(numberOfDocs, i * stepSize * numberOfDocs);
-            y1[(i - 1)] = sumSquareDiff(sortedScores, tmpScores, 0, 30);
-            y2[(i - 1)] = sumSquareDiff(
-                    sortedScores, tmpScores, numberOfDocs - 30, numberOfDocs);
+    void computePageRank(int numberOfDocs) {
+        File index = new File("pageRank");
+        if (!index.exists()) {
+            index.mkdir();
         }
-        Plot plot = new Plot("Monte Carlo 5", x, y1, y2);
-
+        double[] scores = powerIteration(numberOfDocs);
+        Doc[] sortScores = sortScores(scores);
+        saveScoreDocId(sortScores, index + "/power_external_docID", true);
+        saveScoreDocId(sortScores, index + "/power_internal_docID", false);
+        saveScoreName(sortScores, index + "/power_names");
+        saveHashSerial(sortScores, index + "/pageRank");
     }
 
-
-    /* --------------------------------------------- */
- /*
-     *   Computes the pagerank of each document.
-     */
+//    void plotScores(int numberOfDocs) {
+//        int stepSize = 20;
+//        int steps = 20;
+//        try {
+//            Doc[] powerScores = readScores(numberOfDocs,
+//                    "power_internal_docID.txt", "; ");
+//
+//            String[] names = {"Monte Carlo 1", "Monte Carlo 2", "Monte Carlo 3",
+//                "Monte Carlo 4", "Monte Carlo 5"};
+//            for (String name : names) {
+//                double[] tmpScores;
+//                double[] y1 = new double[steps];
+//                double[] x = new double[steps];
+//                double[] y2 = new double[steps];
+//                for (int i = 1; i <= steps; i++) {
+//                    x[(i - 1)] = i * stepSize;
+//                    if (name.equals("Monte Carlo 1")) {
+//                        tmpScores = monteCarlo1(numberOfDocs,
+//                                i * stepSize * numberOfDocs);
+//                    } else if (name.equals("Monte Carlo 2")) {
+//                        tmpScores = monteCarlo2(numberOfDocs,
+//                                i * stepSize * numberOfDocs);
+//                    } else if (name.equals("Monte Carlo 3")) {
+//                        tmpScores = monteCarlo3(numberOfDocs,
+//                                i * stepSize * numberOfDocs);
+//                    } else if (name.equals("Monte Carlo 4")) {
+//                        tmpScores = monteCarlo4(numberOfDocs,
+//                                i * stepSize * numberOfDocs);
+//                    } else {
+//                        tmpScores = monteCarlo5(numberOfDocs,
+//                                i * stepSize * numberOfDocs);
+//                    }
+//                    y1[(i - 1)] = sumSquareDiff(powerScores, tmpScores, 0, 30);
+//                    y2[(i - 1)] = sumSquareDiff(
+//                            powerScores, tmpScores, numberOfDocs - 30, numberOfDocs);
+//                }
+//                new Plot(name, x, y1, y2);
+//            }
+//
+//        } catch (IOException ex) {
+//            Logger.getLogger(PageRank.class.getName()).log(Level.SEVERE, null, ex);
+//        }
+//
+//    }
     double[] powerIteration(int numberOfDocs) {
-        double[][] list1 = new double[1][numberOfDocs];
-        double[][] list2 = new double[1][numberOfDocs];
-        list2[0][0] = 1;
-        Matrix xLast = new Matrix(list1);
-        Matrix xNew = new Matrix(list2);
+        double[] xLast = new double[numberOfDocs];
+        double[] xNew = new double[numberOfDocs];
+        xNew[0] = 1.0;
         double newPageProb = BORED / numberOfDocs;
-        double[][] listG = new double[numberOfDocs][numberOfDocs];
+        int iteration = 0;
+        double diff = sumSquareDiff(xLast, xNew);
 
-        for (int i = 0; i < numberOfDocs; i++) {
-            if (link.containsKey(i)) {
-                for (int j = 0; j < numberOfDocs; j++) {
-                    if (link.get(i).containsKey(j) && link.get(i).get(j) == true) {
-                        listG[i][j] = (1 - BORED) / out[i] + newPageProb;
-                    } else {
-                        listG[i][j] = newPageProb;
+        while (diff > EPSILON && iteration < MAX_NUMBER_OF_ITERATIONS) {
+
+            System.out.println("iteration: " + iteration + ", diff: " + diff);
+            xLast = xNew;
+            xNew = new double[numberOfDocs];
+
+            for (int i = 0; i < numberOfDocs; i++) {
+                if (link.containsKey(i)) {
+                    for (int j = 0; j < numberOfDocs; j++) {
+                        if (link.get(i).containsKey(j) && link.get(i).get(j) == true) {
+                            xNew[j] += xLast[i] * ((1 - BORED) / out[i] + newPageProb);
+                        } else {
+                            xNew[j] += xLast[i] * newPageProb;
+                        }
+
+                    }
+                } else {
+                    for (int j = 0; j < numberOfDocs; j++) {
+                        xNew[j] += xLast[i] / numberOfDocs;
                     }
                 }
-            } else {
-                for (int j = 0; j < numberOfDocs; j++) {
-                    listG[i][j] = 1.0 / numberOfDocs;
-                }
             }
-        }
-        int iteration = 0;
-        Matrix gMatrix = new Matrix(listG);
-        while (xLast.absDiff(xNew) > EPSILON
-                && iteration < MAX_NUMBER_OF_ITERATIONS) {
-            System.out.println(xLast.absDiff(xNew));
             iteration++;
-            System.out.println(iteration);
-            xLast = xNew;
-            xNew = xNew.multiply(gMatrix);
+            diff = sumSquareDiff(xLast, xNew);
         }
-        return xNew.getVector();
+        return xNew;
     }
 
     double[] monteCarlo1(int numberOfDocs, int n) {
@@ -302,7 +333,7 @@ public class PageRank {
             iteration++;
 
         }
-        normalize(scores, (1 - c) / n);
+        normalize(scores, n / (1 - c));
         return scores;
     }
 
@@ -371,7 +402,7 @@ public class PageRank {
 
     void sortAndSave(double[] scores, String name) {
         Doc[] docs = sortScores(scores);
-        saveScoreDocId(docs, name);
+        saveScoreDocId(docs, name, false);
     }
 
 //    Doc[] sortScores(Matrix scores) {
@@ -391,11 +422,15 @@ public class PageRank {
         return docs;
     }
 
-    void saveScoreDocId(Doc[] docs, String name) {
+    void saveScoreDocId(Doc[] docs, String name, boolean external) {
         try {
             PrintWriter writer = new PrintWriter(name + ".txt", "UTF-8");
             for (Doc doc : docs) {
-                writer.println(docName[doc.docID] + "; " + doc.score);
+                if (external) {
+                    writer.println(docName[doc.docID] + "; " + doc.score);
+                } else {
+                    writer.println(doc.docID + "; " + doc.score);
+                }
             }
             writer.close();
         } catch (FileNotFoundException ex) {
@@ -422,7 +457,7 @@ public class PageRank {
         }
     }
 
-    void saveHashSerial(Doc[] docs, String name) {
+    void saveHashSerial(Doc[] docs, String outFile) {
         HashMap translater;
         try {
             translater = docIdTranslater("articleTitles.txt", ";");
@@ -430,7 +465,7 @@ public class PageRank {
             for (Doc doc : docs) {
                 hashSerial.put(translater.get(docName[doc.docID]), doc.score);
             }
-            hashSerial.serialize("scores");
+            hashSerial.serialize(outFile);
         } catch (IOException ex) {
             Logger.getLogger(PageRank.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -450,12 +485,36 @@ public class PageRank {
         return hashMap;
     }
 
+    Doc[] readScores(int numberOfDocs, String filename, String seperator)
+            throws FileNotFoundException, IOException {
+        Doc[] scores = new Doc[numberOfDocs];
+        BufferedReader in = new BufferedReader(new FileReader(filename));
+        String line;
+        int i = 0;
+        while ((line = in.readLine()) != null) {
+            int index = line.indexOf(seperator);
+            String docID = line.substring(0, index);
+            String score = line.substring(index + 1);
+            scores[i] = new Doc(Integer.parseInt(docID), Double.parseDouble(score));
+            i++;
+        }
+        return scores;
+    }
+
+    double sumSquareDiff(double[] score1, double[] score2) {
+        double sum = 0;
+        for (int i = 0; i < score1.length; i++) {
+            sum += Math.pow(score1[i] - score2[i], 2);
+        }
+        return Math.sqrt(sum);
+    }
+
     double sumSquareDiff(Doc[] docs, double[] score2, int start, int stop) {
         double sum = 0;
         for (int i = start; i < stop; i++) {
             sum += Math.pow(docs[i].score - score2[docs[i].docID], 2);
         }
-        return sum;
+        return Math.sqrt(sum);
     }
 
     public static void main(String[] args) {
@@ -463,68 +522,8 @@ public class PageRank {
             System.err.println("Please give the name of the link file");
         } else {
             new PageRank(args[0]);
+
         }
-    }
-
-    class Matrix {
-
-        protected final double[][] matrix;
-        protected final int rows;
-        protected final int columns;
-
-        public Matrix(double[][] in_matrix) {
-            matrix = in_matrix;
-            rows = matrix.length;
-            columns = matrix[0].length;
-        }
-
-        public Matrix multiply(Matrix inMatrix) {//returns Matrix*inMatrix
-            double[][] out_matrix = new double[rows][inMatrix.columns];
-            for (int h = 0; h < inMatrix.columns; h++) {
-                for (int i = 0; i < rows; i++) {
-                    double tmp_sum = 0;
-                    for (int j = 0; j < columns; j++) {
-                        tmp_sum = tmp_sum + inMatrix.matrix[j][h] * matrix[i][j];
-                    }
-                    out_matrix[i][h] = tmp_sum;
-                    /*same row index as Matrix, same column index as inMatrix*/
-                }
-            }
-            return new Matrix(out_matrix);
-        }
-
-        public void print() {
-            for (double[] row : matrix) {
-                System.out.println(Arrays.toString(row));
-            }
-        }
-
-        public double absDiff(Matrix other) {
-
-            if (this.rows != 1 || other.rows != 1
-                    || this.columns != other.columns) {
-                throw new Error("Wrong size of matrix");
-            }
-            double result = 0;
-            for (int i = 0; i < columns; i++) {
-                result += Math.pow(matrix[0][i] - other.matrix[0][i], 2);
-            }
-            result = Math.sqrt(result);
-            return result;
-        }
-
-        public double sumRow() {
-            double sum = 0;
-            for (int j = 0; j < columns; j++) {
-                sum += matrix[0][j];
-            }
-            return sum;
-        }
-
-        public double[] getVector() {
-            return matrix[0];
-        }
-
     }
 
     class Doc implements Comparable<Doc> {
