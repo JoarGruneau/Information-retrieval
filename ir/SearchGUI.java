@@ -193,7 +193,7 @@ public class SearchGUI extends JFrame {
                     buf.append("\nFound " + results.size() + " matching document(s)\n\n");
                     for (int i = 0; i < results.size(); i++) {
                         buf.append(" " + i + ". ");
-                        String filename = Index.docIDs.get("" + results.get(i).docID);
+                        String filename = Indexer.docIDs.get("" + results.get(i).docID);
                         if (filename == null) {
                             buf.append("" + results.get(i).docID);
                         } else {
@@ -240,7 +240,7 @@ public class SearchGUI extends JFrame {
                     buf.append("\nFound " + results.size() + " matching document(s)\n\n");
                     for (int i = 0; i < results.size(); i++) {
                         buf.append(" " + i + ". ");
-                        String filename = Index.docIDs.get("" + results.get(i).docID);
+                        String filename = Indexer.docIDs.get("" + results.get(i).docID);
                         if (filename == null) {
                             buf.append("" + results.get(i).docID);
                         } else {
@@ -347,8 +347,8 @@ public class SearchGUI extends JFrame {
         indexer = new Indexer(patterns_file);
         synchronized (indexLock) {
             if (dirNames.isEmpty()) {
-//                indexer.docIDs = HashSerial.deSerialize(Index.PATH + "docIDs");
-//                indexer.docLengths = HashSerial.deSerialize(Index.PATH + "docLengths");
+                indexer.docIDs = HashSerial.deSerialize(Index.PATH + "docIDs");
+                indexer.docLengths = HashSerial.deSerialize(Index.PATH + "docLengths");
             } else {
 
                 resultWindow.setText("\n  Indexing, please wait...");
@@ -356,12 +356,11 @@ public class SearchGUI extends JFrame {
                     File dokDir = new File(dirNames.get(i));
                     indexer.processFiles(dokDir);
                 }
-                //indexer.index.calcScore();
-//                Indexer.docIDs.serialize(Index.PATH + "docIDs");
-//                Indexer.docLengths.serialize(Index.PATH + "docLengths");
-//                //indexer.index.saveAll();
-//                indexer.index.saveDictionary();
-//                indexer.index.cleanup();
+                Indexer.docIDs.serialize(Index.PATH + "docIDs");
+                Indexer.docLengths.serialize(Index.PATH + "docLengths");
+                indexer.index.saveAll();
+                indexer.index.saveDictionary();
+                indexer.index.cleanup();
             }
             resultWindow.setText("\n  Done!");
         }

@@ -9,6 +9,8 @@ import java.awt.Color;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
+import org.jfree.chart.axis.LogAxis;
+import org.jfree.chart.axis.NumberAxis;
 import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.chart.plot.XYPlot;
 import org.jfree.chart.renderer.xy.XYLineAndShapeRenderer;
@@ -36,18 +38,27 @@ public class Plot extends ApplicationFrame {
         }
         final XYSeriesCollection dataLow = new XYSeriesCollection(low);
 
-        final JFreeChart chart = ChartFactory.createXYLineChart(
-                title,
-                "X/numberOfDocs",
-                "Sum of Square Error",
-                dataHigh,
-                PlotOrientation.VERTICAL,
-                true,
-                true,
-                false
-        );
+//        final JFreeChart chart = ChartFactory.createXYLineChart(
+//                title,
+//                "N/numberOfDocs",
+//                "Sum of Square Error",
+//                dataHigh,
+//                PlotOrientation.VERTICAL,
+//                true,
+//                true,
+//                false
+//        );
+        NumberAxis xAxis = new NumberAxis("N/numberOfDocs");
+        xAxis.setStandardTickUnits(NumberAxis.createIntegerTickUnits());
+        LogAxis yAxis = new LogAxis("sqrt(Sum of Square Error)");
+        yAxis.setBase(10);
+        yAxis.setStandardTickUnits(NumberAxis.createIntegerTickUnits());
+        XYPlot plot = new XYPlot(new XYSeriesCollection(high),
+                xAxis, yAxis, new XYLineAndShapeRenderer(true, false));
+        JFreeChart chart = new JFreeChart(
+                title, JFreeChart.DEFAULT_TITLE_FONT, plot, false);
         chart.getXYPlot().setDataset(1, dataLow);
-        XYPlot plot = (XYPlot) chart.getPlot();
+        //XYPlot plot = (XYPlot) chart.getPlot();
         XYLineAndShapeRenderer renderer0 = new XYLineAndShapeRenderer();
         XYLineAndShapeRenderer renderer1 = new XYLineAndShapeRenderer();
         plot.setRenderer(0, renderer0);

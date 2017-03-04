@@ -33,13 +33,13 @@ public class HashedIndex implements Index {
      */
     @Override
     public void insert(String token, int docID, int offset) {
-//        if (docID % 6000 == 0 && docID != lastDocID) {
-//            System.out.println("Saving large lists to disk....");
-//            saveLargeLists();
-//        }
-//        if (Runtime.getRuntime().freeMemory() < 10000000 && docID != lastDocID) {
-//            saveAll();
-//        }
+        if (docID % 6000 == 0 && docID != lastDocID) {
+            System.out.println("Saving large lists to disk....");
+            saveLargeLists();
+        }
+        if (Runtime.getRuntime().freeMemory() < 10000000 && docID != lastDocID) {
+            saveAll();
+        }
         if (index.containsKey(token)) {
             PostingsList postingsList = index.get(token);
             if (postingsList.getLast().docID == docID) {
@@ -204,16 +204,26 @@ public class HashedIndex implements Index {
 
     public PostingsList unionQuery(Query query) {
         PostingsList result = new PostingsList();
-        int postingsIndex;
+        HashMap<Integer, PostingsEntry> union = new HashMap<>();
         PostingsList postingsList;
         for (int i = 0; i < query.terms.size(); i++) {
-            postingsList = getPostings(query.terms.get(i)).clone();
+
+            if (!dictionary.containsKey(query.terms.get(i))) {
+                postingsList = new PostingsList();
+            } else {
+                postingsList = PostingsList.deSerialize(path
+                        + dictionary.get(query.terms.get(i)));
+            }
+
             for (PostingsEntry entry : postingsList.list) {
-                postingsIndex = result.index(entry);
-                if (postingsIndex == -1) {
-                    result.add(entry.clone());
+                if (!union.containsKey(entry.docID)) {
+                    union.put(entry.docID, entry);
                 }
             }
+        }
+
+        for (int docID : union.keySet()) {
+            result.add(union.get(docID));
         }
         return result;
     }
@@ -223,31 +233,38 @@ public class HashedIndex implements Index {
         PostingsList postingsList;
         HashMap<Integer, PostingsEntry> scores = new HashMap<>();
         for (int i = 0; i < query.terms.size(); i++) {
-            postingsList = getPostings(query.terms.get(i)).clone();
+            if (!dictionary.containsKey(query.terms.get(i))) {
+                postingsList = new PostingsList();
+            } else {
+                postingsList = PostingsList.deSerialize(path
+                        + dictionary.get(query.terms.get(i)));
+            }
             postingsList.calcScore();
             for (PostingsEntry entry : postingsList.list) {
                 if (scores.containsKey(entry.docID)) {
                     PostingsEntry tmpEntry = scores.get(entry.docID);
                     tmpEntry.score += entry.score;
-                    scores.put(tmpEntry.docID, tmpEntry);
                 } else {
                     scores.put(entry.docID, entry);
                 }
             }
         }
+
         for (int docID : scores.keySet()) {
             result.add(scores.get(docID));
         }
-        result.normalizeScore();
+        result.divideScore();
         result.sort();
         return result;
     }
 
-    public PostingsList pageRankScore(PostingsList postingsList) {
+    public PostingsList pageRankScore(PostingsList postingsList, double c) {
         HashSerial scores = HashSerial.deSerialize("pageRank/pageRank");
         for (PostingsEntry entry : postingsList.list) {
-            entry.score += Double.parseDouble(
-                    (String) scores.get(docIDs.get("" + entry.docID)));
+            if (scores.containsKey(Indexer.docIDs.get("" + entry.docID))) {
+                entry.score = entry.score / c + c * (double) scores.get(
+                        Indexer.docIDs.get("" + entry.docID));
+            }
         }
         postingsList.sort();
         return postingsList;
@@ -260,32 +277,52 @@ public class HashedIndex implements Index {
     public PostingsList search(Query query, int queryType, int rankingType,
             int structureType) {
 
-        if (query.terms.isEmpty()) {
+        if (dictionary.isEmpty()) {
+            loadDictionary();
+        }
+
+        if (query.terms.isEmpty() || !dictionary.containsKey(query.terms.get(0))) {
             return new PostingsList();
         }
 
-        PostingsList result = getPostings(query.terms.getFirst());
+        PostingsList result = new PostingsList();
 
         if (queryType == Index.INTERSECTION_QUERY) {
-            System.out.println(queryType);
+            result = PostingsList.deSerialize(path
+                    + dictionary.get(query.terms.getFirst()));
 
             for (int i = 1; i < query.terms.size(); i++) {
-                result = intersect(result, getPostings(query.terms.get(i)));
+
+                if (!dictionary.containsKey(query.terms.get(i))) {
+                    return new PostingsList();
+                }
+                result = intersect(result,
+                        PostingsList.deSerialize(path
+                                + dictionary.get(query.terms.get(i))));
             }
         } else if (queryType == Index.PHRASE_QUERY) {
+            result = PostingsList.deSerialize(path
+                    + dictionary.get(query.terms.getFirst()));
 
             for (int i = 1; i < query.terms.size(); i++) {
+
+                if (!dictionary.containsKey(query.terms.get(i))) {
+                    return new PostingsList();
+                }
                 result = positionalIntersect(result,
-                        getPostings(query.terms.get(i)), i);
+                        PostingsList.deSerialize(path
+                                + dictionary.get(query.terms.get(i))), i);
             }
         } else if (queryType == Index.RANKED_QUERY) {
+
             if (rankingType == Index.TF_IDF) {
                 result = cosineScore(query);
             } else if (rankingType == Index.PAGERANK) {
                 result = unionQuery(query);
-                pageRankScore(result);
+                result = pageRankScore(result, 1);
             } else {
-
+                result = cosineScore(query);
+                result = pageRankScore(result, 10);
             }
         }
 

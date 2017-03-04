@@ -38,11 +38,11 @@ public class PostingsList implements Serializable {
         return list.size();
     }
 
-    public void normalizeScore() {
+    public void divideScore() {
         for (int i = 0; i < list.size(); i++) {
             PostingsEntry entry = get(i);
             entry.score = entry.score
-                    / (double) Index.docLengths.get(entry.docID + "");
+                    / ((double) Indexer.docLengths.get(entry.docID + ""));
         }
     }
 
@@ -50,7 +50,7 @@ public class PostingsList implements Serializable {
         for (int i = 0; i < list.size(); i++) {
             PostingsEntry entry = get(i);
             entry.score = entry.possitions.size()
-                    * Math.log10((Index.docIDs.size()) / list.size());
+                    * Math.log10((double) (Indexer.docIDs.size()) / list.size());
         }
     }
 

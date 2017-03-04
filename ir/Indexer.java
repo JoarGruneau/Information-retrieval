@@ -36,6 +36,9 @@ public class Indexer {
      */
     String patterns_file;
 
+    public static HashSerial<String, String> docIDs = new HashSerial<>();
+    public static HashSerial<String, Integer> docLengths = new HashSerial<>();
+
 
     /* ----------------------------------------------- */
     /**
@@ -75,7 +78,7 @@ public class Indexer {
                     System.err.println("Indexed " + docID
                             + " files" + " free memory: " + Runtime.getRuntime().freeMemory());
                 }
-                Index.docIDs.put("" + docID, f.getName());
+                Indexer.docIDs.put("" + docID, f.getName());
                 try {
                     //  Read the first few bytes of the file to see if it is
                     // likely to be a PDF
@@ -102,7 +105,7 @@ public class Indexer {
                         String token = tok.nextToken();
                         insertIntoIndex(docID, token, offset++);
                     }
-                    Index.docLengths.put("" + docID, offset);
+                    Indexer.docLengths.put("" + docID, offset);
                     reader.close();
                 } catch (IOException e) {
                     System.err.println("Warning: IOException during indexing.");

@@ -168,14 +168,15 @@ public class PageRank {
     }
 
 //    void plotScores(int numberOfDocs) {
-//        int stepSize = 20;
+//        int stepSize = 50;
 //        int steps = 20;
 //        try {
 //            Doc[] powerScores = readScores(numberOfDocs,
-//                    "power_internal_docID.txt", "; ");
+//                    "pageRank/power_internal_docID.txt", "; ");
 //
 //            String[] names = {"Monte Carlo 1", "Monte Carlo 2", "Monte Carlo 3",
 //                "Monte Carlo 4", "Monte Carlo 5"};
+//
 //            for (String name : names) {
 //                double[] tmpScores;
 //                double[] y1 = new double[steps];
@@ -218,6 +219,7 @@ public class PageRank {
         double newPageProb = BORED / numberOfDocs;
         int iteration = 0;
         double diff = sumSquareDiff(xLast, xNew);
+        HashMap<Integer, Boolean> map;
 
         while (diff > EPSILON && iteration < MAX_NUMBER_OF_ITERATIONS) {
 
@@ -227,8 +229,9 @@ public class PageRank {
 
             for (int i = 0; i < numberOfDocs; i++) {
                 if (link.containsKey(i)) {
+                    map = link.get(i);
                     for (int j = 0; j < numberOfDocs; j++) {
-                        if (link.get(i).containsKey(j) && link.get(i).get(j) == true) {
+                        if (map.containsKey(j) && map.get(j) == true) {
                             xNew[j] += xLast[i] * ((1 - BORED) / out[i] + newPageProb);
                         } else {
                             xNew[j] += xLast[i] * newPageProb;
@@ -445,7 +448,8 @@ public class PageRank {
             HashMap translater = docIdTranslater("articleTitles.txt", ";");
             PrintWriter writer = new PrintWriter(name + ".txt", "UTF-8");
             for (Doc doc : docs) {
-                writer.println(translater.get(docName[doc.docID]) + "; " + doc.score);
+                writer.println(translater.get(docName[doc.docID])
+                        + ".f" + "; " + doc.score);
             }
             writer.close();
         } catch (FileNotFoundException ex) {
@@ -463,7 +467,8 @@ public class PageRank {
             translater = docIdTranslater("articleTitles.txt", ";");
             HashSerial hashSerial = new HashSerial();
             for (Doc doc : docs) {
-                hashSerial.put(translater.get(docName[doc.docID]), doc.score);
+                hashSerial.put(translater.get(docName[doc.docID]) + ".f",
+                        doc.score);
             }
             hashSerial.serialize(outFile);
         } catch (IOException ex) {

@@ -33,8 +33,6 @@ public interface Index {
     public static final int SUBPHRASE = 2;
 
     /*path to postingsLists*/
-    public static HashSerial<String, String> docIDs = new HashSerial<>();
-    public static HashSerial<String, Integer> docLengths = new HashSerial<>();
     public static final String PATH = "/home/joar/Documents/lab/postingsLists/";
 
     public void insert(String token, int docID, int offset);
