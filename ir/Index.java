@@ -49,8 +49,6 @@ public interface Index {
 
     public void saveLargeLists();
 
-    public void saveDictionary();
-
-    public void calcScore();
+    public void saveDiskNames();
 
 }

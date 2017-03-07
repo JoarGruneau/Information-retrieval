@@ -22,7 +22,7 @@ public class HashedIndex implements Index {
      */
     private HashMap<String, PostingsList> index
             = new HashMap<>();
-    private HashSerial dictionary = new HashSerial();
+    private HashSerial diskNames = new HashSerial();
     private String path = "/home/joar/Documents/lab/postingsLists/";
     private int lastDocID;
     private int pointer = 0;
@@ -58,7 +58,10 @@ public class HashedIndex implements Index {
 
     /**
      * Returns all the words in the index.
+     *
+     * @return
      */
+    @Override
     public Iterator<String> getDictionary() {
         Iterator iterator = index.keySet().iterator();
         return iterator;
@@ -68,6 +71,7 @@ public class HashedIndex implements Index {
      * Returns the postings for a specific term, or null if the term is not in
      * the index.
      */
+    @Override
     public PostingsList getPostings(String token) {
         if (index.containsKey(token)) {
             return index.get(token);
@@ -76,39 +80,32 @@ public class HashedIndex implements Index {
         }
     }
 
-    public void loadDictionary() {
-        dictionary = HashSerial.deSerialize(Index.PATH + "dictionary");
+    public void loadDiskNames() {
+        diskNames = HashSerial.deSerialize(Index.PATH + "dictionary");
     }
 
     @Override
-    public void saveDictionary() {
-        dictionary.serialize(Index.PATH + "dictionary");
-        dictionary.clear();
-    }
-
-    public void calcScore() {
-        for (String token : index.keySet()) {
-            index.get(token).calcScore();
-        }
+    public void saveDiskNames() {
+        diskNames.serialize(Index.PATH + "dictionary");
+        diskNames.clear();
     }
 
     @Override
     public void saveLargeLists() {
         boolean saved = false;
         ArrayList<String> removeList = new ArrayList();
-        Iterator tokens = getDictionary();
+        Iterator tokens = index.keySet().iterator();
         while (tokens.hasNext()) {
             String token = (String) tokens.next();
             if (index.get(token).size() > 50) {
                 saved = true;
-                if (dictionary.containsKey(token)) {
-                    PostingsList postingsList = PostingsList.deSerialize(
-                            path + dictionary.get(token));
+                if (diskNames.containsKey(token)) {
+                    PostingsList postingsList = PostingsList.deSerialize(path + diskNames.get(token));
                     postingsList.merge(getPostings(token));
                     postingsList.serialize(path
-                            + dictionary.get(token));
+                            + diskNames.get(token));
                 } else {
-                    dictionary.put(token, pointer);
+                    diskNames.put(token, pointer);
                     getPostings(token).serialize(
                             path + pointer);
                     pointer++;
@@ -128,17 +125,16 @@ public class HashedIndex implements Index {
     @Override
     public void saveAll() {
         System.out.println("Saving to disk....");
-        Iterator tokens = getDictionary();
+        Iterator tokens = index.keySet().iterator();
         while (tokens.hasNext()) {
             String token = (String) tokens.next();
-            if (dictionary.containsKey(token)) {
+            if (diskNames.containsKey(token)) {
                 PostingsList postingsList
-                        = PostingsList.deSerialize(
-                                path + dictionary.get(token));
+                        = PostingsList.deSerialize(path + diskNames.get(token));
                 postingsList.merge(getPostings(token));
-                postingsList.serialize(path + dictionary.get(token));
+                postingsList.serialize(path + diskNames.get(token));
             } else {
-                dictionary.put(token, pointer);
+                diskNames.put(token, pointer);
                 getPostings(token).serialize(
                         path + pointer);
                 pointer++;
@@ -208,11 +204,11 @@ public class HashedIndex implements Index {
         PostingsList postingsList;
         for (int i = 0; i < query.terms.size(); i++) {
 
-            if (!dictionary.containsKey(query.terms.get(i))) {
+            if (!diskNames.containsKey(query.terms.get(i))) {
                 postingsList = new PostingsList();
             } else {
                 postingsList = PostingsList.deSerialize(path
-                        + dictionary.get(query.terms.get(i)));
+                        + diskNames.get(query.terms.get(i)));
             }
 
             for (PostingsEntry entry : postingsList.list) {
@@ -233,11 +229,11 @@ public class HashedIndex implements Index {
         PostingsList postingsList;
         HashMap<Integer, PostingsEntry> scores = new HashMap<>();
         for (int i = 0; i < query.terms.size(); i++) {
-            if (!dictionary.containsKey(query.terms.get(i))) {
+            if (!diskNames.containsKey(query.terms.get(i))) {
                 postingsList = new PostingsList();
             } else {
                 postingsList = PostingsList.deSerialize(path
-                        + dictionary.get(query.terms.get(i)));
+                        + diskNames.get(query.terms.get(i)));
             }
             postingsList.calcScore();
             for (PostingsEntry entry : postingsList.list) {
@@ -277,11 +273,11 @@ public class HashedIndex implements Index {
     public PostingsList search(Query query, int queryType, int rankingType,
             int structureType) {
 
-        if (dictionary.isEmpty()) {
-            loadDictionary();
+        if (diskNames.isEmpty()) {
+            loadDiskNames();
         }
 
-        if (query.terms.isEmpty() || !dictionary.containsKey(query.terms.get(0))) {
+        if (query.terms.isEmpty() || !diskNames.containsKey(query.terms.get(0))) {
             return new PostingsList();
         }
 
@@ -289,29 +285,29 @@ public class HashedIndex implements Index {
 
         if (queryType == Index.INTERSECTION_QUERY) {
             result = PostingsList.deSerialize(path
-                    + dictionary.get(query.terms.getFirst()));
+                    + diskNames.get(query.terms.get(0)));
 
             for (int i = 1; i < query.terms.size(); i++) {
 
-                if (!dictionary.containsKey(query.terms.get(i))) {
+                if (!diskNames.containsKey(query.terms.get(i))) {
                     return new PostingsList();
                 }
                 result = intersect(result,
                         PostingsList.deSerialize(path
-                                + dictionary.get(query.terms.get(i))));
+                                + diskNames.get(query.terms.get(i))));
             }
         } else if (queryType == Index.PHRASE_QUERY) {
             result = PostingsList.deSerialize(path
-                    + dictionary.get(query.terms.getFirst()));
+                    + diskNames.get(query.terms.get(0)));
 
             for (int i = 1; i < query.terms.size(); i++) {
 
-                if (!dictionary.containsKey(query.terms.get(i))) {
+                if (!diskNames.containsKey(query.terms.get(i))) {
                     return new PostingsList();
                 }
                 result = positionalIntersect(result,
                         PostingsList.deSerialize(path
-                                + dictionary.get(query.terms.get(i))), i);
+                                + diskNames.get(query.terms.get(i))), i);
             }
         } else if (queryType == Index.RANKED_QUERY) {
 

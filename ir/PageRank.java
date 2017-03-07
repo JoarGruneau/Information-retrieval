@@ -509,17 +509,17 @@ public class PageRank {
     double sumSquareDiff(double[] score1, double[] score2) {
         double sum = 0;
         for (int i = 0; i < score1.length; i++) {
-            sum += Math.pow(score1[i] - score2[i], 2);
+            sum += Math.abs(score1[i] - score2[i]);
         }
-        return Math.sqrt(sum);
+        return sum;
     }
 
     double sumSquareDiff(Doc[] docs, double[] score2, int start, int stop) {
         double sum = 0;
         for (int i = start; i < stop; i++) {
-            sum += Math.pow(docs[i].score - score2[docs[i].docID], 2);
+            sum += Math.abs(docs[i].score - score2[docs[i].docID]);
         }
-        return Math.sqrt(sum);
+        return sum;
     }
 
     public static void main(String[] args) {

@@ -359,7 +359,7 @@ public class SearchGUI extends JFrame {
                 Indexer.docIDs.serialize(Index.PATH + "docIDs");
                 Indexer.docLengths.serialize(Index.PATH + "docLengths");
                 indexer.index.saveAll();
-                indexer.index.saveDictionary();
+                indexer.index.saveDiskNames();
                 indexer.index.cleanup();
             }
             resultWindow.setText("\n  Done!");
