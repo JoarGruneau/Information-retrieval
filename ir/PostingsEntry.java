@@ -17,7 +17,12 @@ public class PostingsEntry implements Comparable<PostingsEntry>, Serializable {
 
     public int docID;
     public double score = 0;
-    public ArrayList<Integer> possitions;
+    public ArrayList<Integer> possitions = null;
+    private int idfCount = 0;
+
+    public PostingsEntry(int docID) {
+        this.docID = docID;
+    }
 
     public PostingsEntry(int docID, int offset) {
         this.docID = docID;
@@ -32,6 +37,10 @@ public class PostingsEntry implements Comparable<PostingsEntry>, Serializable {
 
     public void addPossition(int offset) {
         possitions.add(offset);
+    }
+
+    public void addDFCount() {
+        idfCount++;
     }
 
     @Override
@@ -49,6 +58,14 @@ public class PostingsEntry implements Comparable<PostingsEntry>, Serializable {
             return true;
         }
         return false;
+    }
+
+    public int getIDF() {
+        if (possitions == null) {
+            return idfCount;
+        } else {
+            return possitions.size();
+        }
     }
 
 //    public void serialize(ObjectOutputStream objectOutputStream)

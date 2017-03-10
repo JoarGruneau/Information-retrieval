@@ -15,6 +15,8 @@ public class Query {
 
     public LinkedList<String> terms = new LinkedList<String>();
     public LinkedList<Double> weights = new LinkedList<Double>();
+    final double alpha = 1.0;
+    final double beta = 0.75;
 
     /**
      * Creates a new empty Query
@@ -52,10 +54,22 @@ public class Query {
 
     public void updateTerms(HashMap newTerms) {
         terms = new LinkedList();
+        weights = new LinkedList();
 
         for (Object term : newTerms.keySet()) {
             terms.add((String) term);
+            weights.add((double) newTerms.get(term));
         }
+    }
+
+    public int getDr(boolean[] relevant) {
+        int dr = 0;
+        for (boolean bol : relevant) {
+            if (bol) {
+                dr++;
+            }
+        }
+        return dr;
     }
 
     /**
@@ -63,30 +77,38 @@ public class Query {
      */
     public void relevanceFeedback(PostingsList results, boolean[] docIsRelevant, Indexer indexer) {
         HashMap<String, Double> hashTerms = new HashMap<>();
-        LinkedList<String> tmpTerms;
+        HashMap<String, Integer> tmpTerms;
+        int nRelevant = getDr(docIsRelevant);
         for (int i = 0; i < docIsRelevant.length; i++) {
             if (docIsRelevant[i]) {
-                String filePath = "/davisWiki/"
+                String filePath = "davisWiki/"
                         + indexer.docIDs.get("" + results.get(i).docID);
-                System.out.println(filePath);
                 tmpTerms = indexer.getTerms(new File(filePath));
 
-                for (String term : tmpTerms) {
+                for (String term : tmpTerms.keySet()) {
                     if (!hashTerms.containsKey(term)) {
-                        hashTerms.put(term, Double.NaN);
+                        hashTerms.put(term, beta / (Indexer.docLengths.get(
+                                results.get(i).docID + "")) * nRelevant);
+                    } else {
+                        hashTerms.put(term, beta * ((double) tmpTerms.get(term))
+                                / (Indexer.docLengths.get(
+                                        results.get(i).docID + "")) * nRelevant);
                     }
                 }
             }
         }
-        for (String term : terms) {
-            if (!hashTerms.containsKey(term)) {
-                hashTerms.put(term, Double.NaN);
+        for (int i = 0; i < terms.size(); i++) {
+            if (!hashTerms.containsKey(terms.get(i))) {
+                hashTerms.put(terms.get(i), alpha * weights.get(i) / terms.size());
+            } else {
+                hashTerms.put(terms.get(i), hashTerms.get(terms.get(i))
+                        + alpha * weights.get(i) / terms.size());
             }
         }
         updateTerms(hashTerms);
 //        System.out.println(docIsRelevant.length);
-//        System.out.println(weights.toString());
-//        System.out.println(terms);
+        System.out.println(weights.toString());
+        System.out.println("Terms:" + terms);
         // results contain the ranked list from the current search
         // docIsRelevant contains the users feedback on which of the 10 first hits are relevant
 

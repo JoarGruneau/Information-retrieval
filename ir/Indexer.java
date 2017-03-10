@@ -24,7 +24,7 @@ public class Indexer {
     /**
      * The index to be built up by this indexer.
      */
-    public Index index = new HashedIndex();
+    public Index indexAdapter = new IndexAdapter();
 
     /**
      * The next docID to be generated.
@@ -96,14 +96,18 @@ public class Indexer {
         }
     }
 
-    public LinkedList getTerms(File f) {
-        LinkedList<String> terms = new LinkedList<>();
+    public HashMap getTerms(File f) {
+        HashMap<String, Integer> terms = new HashMap<>();
         try {
             Reader reader = getReader(f);
             Tokenizer tok = new Tokenizer(reader, true, false, true, patterns_file);
             while (tok.hasMoreTokens()) {
                 String token = tok.nextToken();
-                terms.add(token);
+                if (!terms.containsKey(token)) {
+                    terms.put(token, 1);
+                } else {
+                    terms.put(token, terms.get(token) + 1);
+                }
             }
             reader.close();
         } catch (IOException e) {
@@ -159,6 +163,6 @@ public class Indexer {
      * Indexes one token.
      */
     public void insertIntoIndex(int docID, String token, int offset) {
-        index.insert(token, docID, offset);
+        indexAdapter.insert(token, docID, offset);
     }
 }

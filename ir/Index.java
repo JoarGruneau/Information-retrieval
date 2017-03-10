@@ -32,23 +32,17 @@ public interface Index {
     public static final int BIGRAM = 1;
     public static final int SUBPHRASE = 2;
 
-    /*path to postingsLists*/
     public static final String PATH = "/home/joar/Documents/lab/postingsLists/";
 
     public void insert(String token, int docID, int offset);
 
-    public Iterator<String> getDictionary();
-
-    public PostingsList getPostings(String token);
-
+//    public Iterator<String> getDictionary();
+//
+//    public PostingsList getPostings(String token);
     public PostingsList search(Query query, int queryType, int rankingType, int structureType);
-
-    public void cleanup();
+//
+//    public void cleanup();
 
     public void saveAll();
-
-    public void saveLargeLists();
-
-    public void saveDiskNames();
 
 }

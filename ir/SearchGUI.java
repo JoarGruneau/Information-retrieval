@@ -186,7 +186,7 @@ public class SearchGUI extends JFrame {
                 // we don't want to search at the same time we're indexing new files
                 // (this might corrupt the index).
                 synchronized (indexLock) {
-                    results = indexer.index.search(query, queryType, rankingType, structureType);
+                    results = indexer.indexAdapter.search(query, queryType, rankingType, structureType);
                 }
                 StringBuffer buf = new StringBuffer();
                 if (results != null) {
@@ -234,7 +234,7 @@ public class SearchGUI extends JFrame {
                     // synchronized since we don't want to search at the same time we're indexing new files
                     // (this might corrupt the index).
                     synchronized (indexLock) {
-                        results = indexer.index.search(query, queryType, rankingType, structureType);
+                        results = indexer.indexAdapter.search(query, queryType, rankingType, structureType);
                     }
                     buf.append("\nSearch after relevance feedback:\n");
                     buf.append("\nFound " + results.size() + " matching document(s)\n\n");
@@ -260,7 +260,7 @@ public class SearchGUI extends JFrame {
         Action saveAndQuit = new AbstractAction() {
             public void actionPerformed(ActionEvent e) {
                 resultWindow.setText("\n  Saving index...");
-                indexer.index.cleanup();
+//                indexer.indexAdapter.cleanup();
                 System.exit(0);
             }
         };
@@ -358,47 +358,40 @@ public class SearchGUI extends JFrame {
                 }
                 Indexer.docIDs.serialize(Index.PATH + "docIDs");
                 Indexer.docLengths.serialize(Index.PATH + "docLengths");
-                indexer.index.saveAll();
-                indexer.index.saveDiskNames();
-                indexer.index.cleanup();
+                indexer.indexAdapter.saveAll();
+                System.out.println("Done!");
             }
             resultWindow.setText("\n  Done!");
         }
     }
 
-    public int countFiles(File folder) {
-        int count = 0;
-        File[] files = folder.listFiles();
-        for (File file : files) {
-            if (file.isFile()) {
-                count++;
-            } else {
-                count += countFiles(file);
-            }
-        }
-        return count;
-    }
-
-    public void deleteOldPostings() {
-        File index = new File("/home/joar/Documents/lab/postingsLists");
-        if (!index.exists()) {
-            index.mkdir();
-        } else {
-            String[] entries = index.list();
+    public void deleteDirectory(File dir) {
+        if (dir.exists()) {
+            String[] entries = dir.list();
             for (String entry : entries) {
-                File currentFile = new File(index.getPath(), entry);
-                currentFile.delete();
+                File currentFile = new File(dir.getPath(), entry);
+                if (currentFile.isDirectory()) {
+                    deleteDirectory(currentFile);
+                } else {
+                    currentFile.delete();
+                }
             }
-            index.delete();
-            index.mkdir();
-
-        }
-        String[] entries = index.list();
-        for (String s : entries) {
-            File currentFile = new File(index.getPath(), s);
-            currentFile.delete();
+            dir.delete();
         }
     }
+
+    public void newFolders() {
+        String path = "/home/joar/Documents/lab/postingsLists";
+        deleteDirectory(new File(path));
+        File monoGrams = new File(path + "/monoGrams");
+        File postingsList = new File(path);
+        File biGrams = new File(path + "/biGrams");
+        postingsList.mkdir();
+        monoGrams.mkdir();
+        biGrams.mkdir();
+
+    }
+
 
     /* ----------------------------------------------- */
     /**
@@ -408,7 +401,7 @@ public class SearchGUI extends JFrame {
         int i = 0, j = 0;
         while (i < args.length) {
             if ("-d".equals(args[i])) {
-                deleteOldPostings();
+                newFolders();
                 i++;
                 if (i < args.length) {
                     dirNames.add(args[i++]);
