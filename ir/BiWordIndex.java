@@ -51,21 +51,21 @@ public class BiWordIndex extends AbstractIndex implements Index {
     }
 
     public void saveLargeLists() {
-        saveLargeLists(savePath);
+        saveLargeLists(savePath, false);
     }
 
     @Override
     public void saveAll() {
-        saveAll(savePath, "Saving bi-Grams to disk....");
+        saveAll(savePath, "Saving bi-Grams to disk....", false);
     }
 
     public void loadDiskInfo() {
-        loadDiskInfo(savePath);
+        loadDiskInfo(savePath, false);
 
     }
 
     public void saveDiskInfo() {
-        saveDiskInfo(savePath);
+        saveDiskInfo(savePath, false);
     }
 
     @Override
@@ -74,6 +74,7 @@ public class BiWordIndex extends AbstractIndex implements Index {
         if (diskNames.isEmpty()) {
             loadDiskInfo();
         }
+        System.out.println(biWorfQuery.terms);
 
         if (biWorfQuery.terms.isEmpty() || !diskNames.containsKey(biWorfQuery.terms.get(0))) {
             return new PostingsList();

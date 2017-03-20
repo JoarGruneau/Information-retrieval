@@ -53,20 +53,20 @@ public class HashedIndex extends AbstractIndex implements Index {
     }
 
     public void loadDiskInfo() {
-        loadDiskInfo(savePath);
+        loadDiskInfo(savePath, true);
     }
 
     public void saveDiskInfo() {
-        saveDiskInfo(savePath);
+        saveDiskInfo(savePath, true);
     }
 
     public void saveLargeLists() {
-        saveLargeLists(savePath);
+        saveLargeLists(savePath, true);
     }
 
     @Override
     public void saveAll() {
-        saveAll(savePath, "Saving mono-grams to disk....");
+        saveAll(savePath, "Saving mono-grams to disk....", true);
     }
 
     /**
@@ -113,7 +113,8 @@ public class HashedIndex extends AbstractIndex implements Index {
                                 + diskNames.get(query.terms.get(i))), i);
             }
         } else if (queryType == Index.RANKED_QUERY) {
-            query = washQuery(query);
+            //profiler(query);
+            //query = washQuery(query);
             if (rankingType == Index.TF_IDF) {
                 result = cosineScore(query, savePath);
             } else if (rankingType == Index.PAGERANK) {
@@ -137,36 +138,48 @@ public class HashedIndex extends AbstractIndex implements Index {
 
     public Query washQuery(Query query) {
         Query washedQuery = new Query();
+        StringBuilder washed = new StringBuilder();
+        washed.append("eliminated: ");
+        boolean haveWashed = false;
         for (int i = 0; i < query.terms.size(); i++) {
             if ((double) inverseDF.get(query.terms.get(i)) > treshHold) {
                 washedQuery.terms.add(query.terms.get(i));
                 washedQuery.weights.add(query.weights.get(i));
             } else {
-                System.out.println("washed:" + query.terms.get(i)
-                        + "with idf:" + inverseDF.get(query.terms.get(i)));
+                haveWashed = true;
+                washed.append(query.terms.get(i)).append(", ");
             }
+        }
+        if (haveWashed) {
+            System.out.println(washed.toString());
         }
         return washedQuery;
     }
-//
-//    private void addCount(String token, int increment) {
-//
-//        if (!dfCount.containsKey(token)) {
-//            dfCount.put(token, increment);
-//        } else {
-//            int count = dfCount.get(token);
-//            count += increment;
-//            dfCount.put(token, count);
-//        }
-//    }
-//
-//    private void saveIDF() {
-//        HashSerial serIDF = new HashSerial();
-//        for (String token : dfCount.keySet()) {
-//            serIDF.put(token, Math.log10(
-//                    ((double) Indexer.docIDs.size()) / dfCount.get(token)));
-//        }
-//        serIDF.serialize(savePath + "inverseDF");
-//    }
+
+    private void profiler(Query query) {
+        long startTime;
+        long stopTime;
+        long eliminationTime;
+        long noEliminationTime;
+        System.out.println("Query= " + query.terms);
+
+        startTime = System.nanoTime();
+        cosineScore(washQuery(query), savePath);
+        stopTime = System.nanoTime();
+        eliminationTime = (stopTime - startTime) / 1000000;
+        System.out.println(
+                "Time with index elimination =" + eliminationTime + " ms");
+
+        startTime = System.nanoTime();
+        cosineScore(query, savePath);
+        stopTime = System.nanoTime();
+        noEliminationTime = (stopTime - startTime) / 1000000;
+        System.out.println(
+                "Time without index elimination =" + noEliminationTime + " ms");
+
+        System.out.println(
+                "improvment = " + (100 * noEliminationTime / eliminationTime - 100) + " %");
+
+    }
 
 }

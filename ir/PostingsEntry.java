@@ -18,10 +18,11 @@ public class PostingsEntry implements Comparable<PostingsEntry>, Serializable {
     public int docID;
     public double score = 0;
     public ArrayList<Integer> possitions = null;
-    private int idfCount = 0;
+    private int idfCount;
 
     public PostingsEntry(int docID) {
         this.docID = docID;
+        idfCount = 1;
     }
 
     public PostingsEntry(int docID, int offset) {

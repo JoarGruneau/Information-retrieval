@@ -43,7 +43,7 @@ public class IndexAdapter implements Index {
             PostingsList monoGramResult = monoGramIndex.search(
                     query, queryType, rankingType, structureType);
             result = mergeResults(monoGramResult, biWordResult);
-        } else {
+        } else if (structureType == Index.UNIGRAM) {
             result = monoGramIndex.search(
                     query, queryType, rankingType, structureType);
         }
@@ -80,6 +80,7 @@ public class IndexAdapter implements Index {
         for (int docID : hashResult.keySet()) {
             result.add(hashResult.get(docID));
         }
+        result.sort();
         return result;
     }
 

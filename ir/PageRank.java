@@ -408,14 +408,6 @@ public class PageRank {
         saveScoreDocId(docs, name, false);
     }
 
-//    Doc[] sortScores(Matrix scores) {
-//        Doc[] docs = new Doc[scores.columns];
-//        for (int i = 0; i < scores.columns; i++) {
-//            docs[i] = new Doc(i, scores.matrix[0][i]);
-//        }
-//        Arrays.sort(docs);
-//        return docs;
-//    }
     Doc[] sortScores(double[] scores) {
         Doc[] docs = new Doc[scores.length];
         for (int i = 0; i < scores.length; i++) {

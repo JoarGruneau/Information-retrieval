@@ -43,13 +43,15 @@ public abstract class AbstractIndex implements Index {
         }
     }
 
-    public void saveLargeLists(String savePATH) {
+    public void saveLargeLists(String savePATH, boolean saveIDF) {
         boolean saved = false;
         ArrayList<String> removeList = new ArrayList();
         Iterator tokens = index.keySet().iterator();
         while (tokens.hasNext()) {
             String token = (String) tokens.next();
-            addCount(token, index.get(token).list.size());
+            if (saveIDF) {
+                addCount(token, index.get(token).list.size());
+            }
             if (index.get(token).size() > 50) {
                 saved = true;
                 if (diskNames.containsKey(token)) {
@@ -74,12 +76,14 @@ public abstract class AbstractIndex implements Index {
         }
     }
 
-    public void saveAll(String savePATH, String message) {
+    public void saveAll(String savePATH, String message, boolean saveIDF) {
         System.out.println(message);
         Iterator tokens = index.keySet().iterator();
         while (tokens.hasNext()) {
             String token = (String) tokens.next();
-            addCount(token, index.get(token).list.size());
+            if (saveIDF) {
+                addCount(token, index.get(token).list.size());
+            }
             if (diskNames.containsKey(token)) {
                 PostingsList postingsList
                         = PostingsList.deSerialize(savePATH + diskNames.get(token));
@@ -94,15 +98,19 @@ public abstract class AbstractIndex implements Index {
         index.clear();
     }
 
-    public void loadDiskInfo(String savePath) {
+    public void loadDiskInfo(String savePath, boolean loadIDF) {
         diskNames = HashSerial.deSerialize(savePath + "dictionary");
-        inverseDF = HashSerial.deSerialize(savePath + "inverseDF");
+        if (loadIDF) {
+            inverseDF = HashSerial.deSerialize(savePath + "inverseDF");
+        }
 
     }
 
-    public void saveDiskInfo(String savePath) {
+    public void saveDiskInfo(String savePath, boolean saveIDF) {
         diskNames.serialize(savePath + "dictionary");
-        saveIDF(savePath);
+        if (saveIDF) {
+            saveIDF(savePath);
+        }
         diskNames.clear();
     }
 
@@ -198,13 +206,14 @@ public abstract class AbstractIndex implements Index {
                 postingsList = PostingsList.deSerialize(savePath
                         + diskNames.get(query.terms.get(i)));
             }
-            postingsList.calcScore(inverseDF.get(query.terms.get(i)));
+            postingsList.calcScore();
             for (PostingsEntry entry : postingsList.list) {
                 if (scores.containsKey(entry.docID)) {
                     PostingsEntry tmpEntry = scores.get(entry.docID);
                     tmpEntry.score += query.weights.get(i) * entry.score;
 
                 } else {
+                    entry.score *= query.weights.get(i);
                     scores.put(entry.docID, entry);
                 }
             }

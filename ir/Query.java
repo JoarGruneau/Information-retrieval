@@ -52,13 +52,14 @@ public class Query {
         return queryCopy;
     }
 
-    public void updateTerms(HashMap newTerms) {
+    public void updateTerms(HashMap<String, Double> newTerms) {
         terms = new LinkedList();
         weights = new LinkedList();
 
-        for (Object term : newTerms.keySet()) {
-            terms.add((String) term);
-            weights.add((double) newTerms.get(term));
+        for (String term : newTerms.keySet()) {
+            terms.add(term);
+            weights.add(newTerms.get(term));
+            //System.out.println(term + " weight: " + newTerms.get(term));
         }
     }
 
@@ -75,45 +76,43 @@ public class Query {
     /**
      * Expands the Query using Relevance Feedback
      */
-    public void relevanceFeedback(PostingsList results, boolean[] docIsRelevant, Indexer indexer) {
+    public void relevanceFeedback(PostingsList results,
+            boolean[] docIsRelevant, Indexer indexer) {
         HashMap<String, Double> hashTerms = new HashMap<>();
         HashMap<String, Integer> tmpTerms;
         int nRelevant = getDr(docIsRelevant);
+        double normWeight;
         for (int i = 0; i < docIsRelevant.length; i++) {
+
             if (docIsRelevant[i]) {
                 String filePath = "davisWiki/"
                         + indexer.docIDs.get("" + results.get(i).docID);
                 tmpTerms = indexer.getTerms(new File(filePath));
 
                 for (String term : tmpTerms.keySet()) {
+
+                    normWeight = (beta * tmpTerms.get(term))
+                            / (Indexer.docLengths.get(
+                                    results.get(i).docID + "") * nRelevant);
+
                     if (!hashTerms.containsKey(term)) {
-                        hashTerms.put(term, beta / (Indexer.docLengths.get(
-                                results.get(i).docID + "")) * nRelevant);
+                        hashTerms.put(term, normWeight);
                     } else {
-                        hashTerms.put(term, beta * ((double) tmpTerms.get(term))
-                                / (Indexer.docLengths.get(
-                                        results.get(i).docID + "")) * nRelevant);
+                        hashTerms.put(term, hashTerms.get(term) + normWeight);
                     }
                 }
             }
         }
         for (int i = 0; i < terms.size(); i++) {
+            normWeight = alpha * weights.get(i) / terms.size();
             if (!hashTerms.containsKey(terms.get(i))) {
-                hashTerms.put(terms.get(i), alpha * weights.get(i) / terms.size());
+                hashTerms.put(terms.get(i), normWeight);
             } else {
                 hashTerms.put(terms.get(i), hashTerms.get(terms.get(i))
-                        + alpha * weights.get(i) / terms.size());
+                        + normWeight);
             }
         }
         updateTerms(hashTerms);
-//        System.out.println(docIsRelevant.length);
-        System.out.println(weights.toString());
-        System.out.println("Terms:" + terms);
-        // results contain the ranked list from the current search
-        // docIsRelevant contains the users feedback on which of the 10 first hits are relevant
 
-        //
-        //  YOUR CODE HERE
-        //
     }
 }

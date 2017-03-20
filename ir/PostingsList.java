@@ -46,11 +46,11 @@ public class PostingsList implements Serializable {
         }
     }
 
-    public void calcScore(double idf) {
+    public void calcScore() {
         for (int i = 0; i < list.size(); i++) {
             PostingsEntry entry = get(i);
-            entry.score = entry.getIDF() * idf;
-//                    * Math.log10((double) (Indexer.docIDs.size()) / list.size());
+            entry.score = entry.getIDF()
+                    * Math.log10((double) (Indexer.docIDs.size()) / list.size());
         }
     }
 
