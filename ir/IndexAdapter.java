@@ -60,20 +60,24 @@ public class IndexAdapter implements Index {
         biWordIndex.saveDiskInfo();
     }
 
-    private PostingsList mergeResults(PostingsList p1, PostingsList p2) {
+    private PostingsList mergeResults(PostingsList monoGram, PostingsList biGram) {
         HashMap<Integer, PostingsEntry> hashResult = new HashMap<>();
         PostingsList result = new PostingsList();
+        monoGram.sort();
+        double maxScore = monoGram.list.getFirst().score;
 
-        for (PostingsEntry entry : p1.list) {
+        for (PostingsEntry entry : monoGram.list) {
             hashResult.put(entry.docID, entry);
         }
 
-        for (PostingsEntry entry : p2.list) {
+        for (PostingsEntry entry : biGram.list) {
             if (hashResult.containsKey(entry.docID)) {
                 PostingsEntry hashEntry = hashResult.get(entry.docID);
-                hashEntry.score += entry.score;
+                hashEntry.score += +maxScore + entry.score;
             } else {
-                hashResult.put(entry.docID, entry);
+                throw new Error("a bigram result should "
+                        + "alway have a monogram result as well");
+                //hashResult.put(entry.docID, entry);
             }
         }
 

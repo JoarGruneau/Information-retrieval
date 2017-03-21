@@ -26,13 +26,13 @@ public class Plot extends ApplicationFrame {
 
     public Plot(String title, double[] x, double[] y1, double[] y2) {
         super(title);
-        final XYSeries high = new XYSeries("Top 30");
+        final XYSeries high = new XYSeries("Precision");
         for (int i = 0; i < x.length; i++) {
             high.add(x[i], y1[i]);
         }
         final XYSeriesCollection dataHigh = new XYSeriesCollection(high);
 
-        final XYSeries low = new XYSeries("Last 30");
+        final XYSeries low = new XYSeries("recall");
         for (int i = 0; i < x.length; i++) {
             low.add(x[i], y2[i]);
         }
@@ -48,15 +48,16 @@ public class Plot extends ApplicationFrame {
 //                true,
 //                false
 //        );
-        NumberAxis xAxis = new NumberAxis("N/numberOfDocs");
+        NumberAxis xAxis = new NumberAxis("Top x");
         xAxis.setStandardTickUnits(NumberAxis.createIntegerTickUnits());
-        LogAxis yAxis = new LogAxis("sqrt(Sum of Square Error)");
-        yAxis.setBase(10);
-        yAxis.setStandardTickUnits(NumberAxis.createIntegerTickUnits());
-        XYPlot plot = new XYPlot(new XYSeriesCollection(high),
+        NumberAxis yAxis = new NumberAxis("");
+//        LogAxis yAxis = new LogAxis("sqrt(Sum of Square Error)");
+//        yAxis.setBase(10);
+        yAxis.setStandardTickUnits(NumberAxis.createStandardTickUnits());
+        XYPlot plot = new XYPlot(dataHigh,
                 xAxis, yAxis, new XYLineAndShapeRenderer(true, false));
         JFreeChart chart = new JFreeChart(
-                title, JFreeChart.DEFAULT_TITLE_FONT, plot, false);
+                title, JFreeChart.DEFAULT_TITLE_FONT, plot, true);
         chart.getXYPlot().setDataset(1, dataLow);
         //XYPlot plot = (XYPlot) chart.getPlot();
         XYLineAndShapeRenderer renderer0 = new XYLineAndShapeRenderer();
