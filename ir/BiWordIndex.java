@@ -74,7 +74,6 @@ public class BiWordIndex extends AbstractIndex implements Index {
         if (diskNames.isEmpty()) {
             loadDiskInfo();
         }
-        System.out.println(biWorfQuery.terms);
 
         if (biWorfQuery.terms.isEmpty() || !diskNames.containsKey(biWorfQuery.terms.get(0))) {
             return new PostingsList();

@@ -73,7 +73,7 @@ public class IndexAdapter implements Index {
         for (PostingsEntry entry : biGram.list) {
             if (hashResult.containsKey(entry.docID)) {
                 PostingsEntry hashEntry = hashResult.get(entry.docID);
-                hashEntry.score += +maxScore + entry.score;
+                hashEntry.score = maxScore + entry.score;
             } else {
                 throw new Error("a bigram result should "
                         + "alway have a monogram result as well");

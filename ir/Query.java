@@ -15,8 +15,8 @@ public class Query {
 
     public LinkedList<String> terms = new LinkedList<String>();
     public LinkedList<Double> weights = new LinkedList<Double>();
-    final double alpha = 1.0;
-    final double beta = 0.75;
+    final double alpha = 1;
+    final double beta = 0.8;
 
     /**
      * Creates a new empty Query
@@ -73,6 +73,24 @@ public class Query {
         return dr;
     }
 
+    public double length(Query query) {
+        double length = 0;
+        for (double weight : query.weights) {
+            length += Math.pow(weight, 2);
+        }
+        length = Math.sqrt(length);
+        return length;
+    }
+
+    public double lengthDoc(HashMap<String, Integer> doc) {
+        double length = 0;
+        for (String term : doc.keySet()) {
+            length += Math.pow(doc.get(term), 2);
+        }
+        length = Math.sqrt(length);
+        return length;
+    }
+
     /**
      * Expands the Query using Relevance Feedback
      */
@@ -85,15 +103,15 @@ public class Query {
         for (int i = 0; i < docIsRelevant.length; i++) {
 
             if (docIsRelevant[i]) {
+
                 String filePath = "davisWiki/"
                         + indexer.docIDs.get("" + results.get(i).docID);
                 tmpTerms = indexer.getTerms(new File(filePath));
-
+                double length = lengthDoc(tmpTerms);
                 for (String term : tmpTerms.keySet()) {
 
                     normWeight = (beta * tmpTerms.get(term))
-                            / (Indexer.docLengths.get(
-                                    results.get(i).docID + "") * nRelevant);
+                            / (length * nRelevant);
 
                     if (!hashTerms.containsKey(term)) {
                         hashTerms.put(term, normWeight);
@@ -103,8 +121,9 @@ public class Query {
                 }
             }
         }
+        double length = length(this);
         for (int i = 0; i < terms.size(); i++) {
-            normWeight = alpha * weights.get(i) / terms.size();
+            normWeight = alpha * weights.get(i) / length;
             if (!hashTerms.containsKey(terms.get(i))) {
                 hashTerms.put(terms.get(i), normWeight);
             } else {

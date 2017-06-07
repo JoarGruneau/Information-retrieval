@@ -114,7 +114,7 @@ public class HashedIndex extends AbstractIndex implements Index {
             }
         } else if (queryType == Index.RANKED_QUERY) {
             //profiler(query);
-            //query = washQuery(query);
+            query = washQuery(query);
             if (rankingType == Index.TF_IDF) {
                 result = cosineScore(query, savePath);
             } else if (rankingType == Index.PAGERANK) {
